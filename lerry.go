@@ -6,6 +6,9 @@ import (
 	"github.com/mgutz/logxi/v1"
 )
 
+const NestedError = "nested error"
+const UserMessage = "user message"
+
 func Wrap(e error, level int) merry.Error {
 	if e == nil {
 		return nil
@@ -41,13 +44,20 @@ func Print(lg log.Logger, err error) {
 	lg.Log(level, msg, args)
 }
 
+func NestedPrint(lg log.Logger, err error) {
+	if nerr, ok := merry.Value(err, NestedError).(error); ok {
+		NestedPrint(lg, nerr)
+	}
+	Print(lg, err)
+}
+
 func Prepare(err error) (level int, message string, arguments []interface{}) {
 	values := merry.Values(err)
 
 	args := make([]interface{}, 0)
 
 	for key, val := range values {
-		if key == "user message" {
+		if key == UserMessage || key == NestedError {
 			continue
 		}
 
