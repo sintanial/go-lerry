@@ -9,34 +9,34 @@ import (
 const NestedError = "nested error"
 const UserMessage = "user message"
 
-func Wrap(e error, level int) merry.Error {
+func wrap(e error, level int, skipstack int) merry.Error {
 	if e == nil {
 		return nil
 	}
 
-	return merry.WrapSkipping(e, 1).WithValue("level", level)
+	return merry.WrapSkipping(e, skipstack).WithValue("level", level)
 }
 
 func AlertWrap(e error) merry.Error {
-	return Wrap(e, log.LevelAlert)
+	return wrap(e, log.LevelAlert, 2)
 }
 
 func FatalWrap(e error) merry.Error {
-	return Wrap(e, log.LevelFatal)
+	return wrap(e, log.LevelFatal, 2)
 }
 func ErrorWrap(e error) merry.Error {
-	return Wrap(e, log.LevelError)
+	return wrap(e, log.LevelError, 2)
 }
 func WarnWrap(e error) merry.Error {
-	return Wrap(e, log.LevelWarn)
+	return wrap(e, log.LevelWarn, 2)
 }
 
 func NoticeWrap(e error) merry.Error {
-	return Wrap(e, log.LevelNotice)
+	return wrap(e, log.LevelNotice, 2)
 }
 
 func InfoWrap(e error) merry.Error {
-	return Wrap(e, log.LevelInfo)
+	return wrap(e, log.LevelInfo, 2)
 }
 
 func Print(lg log.Logger, err error) {
