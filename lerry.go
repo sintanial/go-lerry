@@ -3,7 +3,36 @@ package lerry
 import (
 	"reflect"
 	"github.com/ansel1/merry"
-	"github.com/mgutz/logxi/v1"
+)
+
+type Logger interface {
+	Log(level int, msg string, args ...interface{})
+}
+
+const (
+	// LevelAlert means action must be taken immediately.
+	LevelAlert = 1
+
+	// LevelFatal means it should be corrected immediately, eg cannot connect to database.
+	LevelFatal = 2
+
+	// LevelError is a non-urgen failure to notify devlopers or admins
+	LevelError = 3
+
+	// LevelWarn indiates an error will occur if action is not taken, eg file system 85% full
+	LevelWarn = 4
+
+	// LevelNotice is normal but significant condition.
+	LevelNotice = 5
+
+	// LevelInfo is info level
+	LevelInfo = 6
+
+	// LevelDebug is debug level
+	LevelDebug = 7
+
+	// LevelTrace is trace level and displays file and line in terminal
+	LevelTrace = 8
 )
 
 const NestedError = "nested error"
@@ -18,33 +47,41 @@ func wrap(e error, level int) merry.Error {
 }
 
 func AlertWrap(e error) merry.Error {
-	return wrap(e, log.LevelAlert)
+	return wrap(e, LevelAlert)
 }
 
 func FatalWrap(e error) merry.Error {
-	return wrap(e, log.LevelFatal)
+	return wrap(e, LevelFatal)
 }
 func ErrorWrap(e error) merry.Error {
-	return wrap(e, log.LevelError)
+	return wrap(e, LevelError)
 }
 func WarnWrap(e error) merry.Error {
-	return wrap(e, log.LevelWarn)
+	return wrap(e, LevelWarn)
 }
 
 func NoticeWrap(e error) merry.Error {
-	return wrap(e, log.LevelNotice)
+	return wrap(e, LevelNotice)
 }
 
 func InfoWrap(e error) merry.Error {
-	return wrap(e, log.LevelInfo)
+	return wrap(e, LevelInfo)
 }
 
-func Print(lg log.Logger, err error) {
+func DebugWrap(e error) merry.Error {
+	return wrap(e, LevelDebug)
+}
+
+func TraceWrap(e error) merry.Error {
+	return wrap(e, LevelTrace)
+}
+
+func Print(lg Logger, err error) {
 	level, msg, args := Prepare(err)
 	lg.Log(level, msg, args)
 }
 
-func NestedPrint(lg log.Logger, err error) {
+func NestedPrint(lg Logger, err error) {
 	if nerr, ok := merry.Value(err, NestedError).(error); ok {
 		NestedPrint(lg, nerr)
 	}
@@ -74,7 +111,7 @@ func Prepare(err error) (level int, message string, arguments []interface{}) {
 	usrmsg := merry.UserMessage(err)
 	lv, ok := merry.Value(err, "level").(int)
 	if !ok {
-		lv = log.LevelWarn
+		lv = LevelWarn
 	}
 
 	return lv, usrmsg + ": " + errmsg, args
