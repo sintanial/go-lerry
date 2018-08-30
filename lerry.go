@@ -35,8 +35,10 @@ const (
 	LevelTrace = 8
 )
 
-const NestedError = "nested error"
-const UserMessage = "user message"
+const KeyNestedError = "nested error"
+const KeyUserMessage = "user message"
+const KeyLevel = "level"
+const KeyHttpResponseStatusCode = "http status code"
 
 func wrap(e error, level int) merry.Error {
 	if e == nil {
@@ -82,7 +84,7 @@ func Print(lg Logger, err error) {
 }
 
 func NestedPrint(lg Logger, err error) {
-	if nerr, ok := merry.Value(err, NestedError).(error); ok {
+	if nerr, ok := merry.Value(err, KeyNestedError).(error); ok {
 		NestedPrint(lg, nerr)
 	}
 	Print(lg, err)
@@ -94,7 +96,7 @@ func Prepare(err error) (level int, message string, arguments []interface{}) {
 	args := make([]interface{}, 0)
 
 	for key, val := range values {
-		if key == UserMessage || key == NestedError {
+		if key == KeyUserMessage || key == KeyNestedError || key == KeyLevel || key == KeyHttpResponseStatusCode {
 			continue
 		}
 
