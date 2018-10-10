@@ -103,15 +103,17 @@ func Prepare(err error) (level int, message string, arguments []interface{}) {
 		}
 	}
 
-	if strace := merry.Stacktrace(err); strace != "" {
-		args = append(args, "stack", strace)
-	}
-
 	errmsg := err.Error()
 	usrmsg := merry.UserMessage(err)
 	lv, ok := merry.Value(err, "level").(int)
 	if !ok {
 		lv = LevelWarn
+	}
+
+	if lv == LevelFatal {
+		if strace := merry.Stacktrace(err); strace != "" {
+			args = append(args, "stack", strace)
+		}
 	}
 
 	return lv, usrmsg + ": " + errmsg, args
