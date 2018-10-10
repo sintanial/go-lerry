@@ -5,9 +5,7 @@ import (
 	"github.com/ansel1/merry"
 )
 
-type Logger interface {
-	Log(level int, msg string, args ...interface{})
-}
+type LoggerFunc func(level int, msg string, args []interface{})
 
 const (
 	// LevelAlert means action must be taken immediately.
@@ -78,12 +76,12 @@ func TraceWrap(e error) merry.Error {
 	return wrap(e, LevelTrace)
 }
 
-func Print(lg Logger, err error) {
+func Print(lg LoggerFunc, err error) {
 	level, msg, args := Prepare(err)
-	lg.Log(level, msg, args)
+	lg(level, msg, args)
 }
 
-func NestedPrint(lg Logger, err error) {
+func NestedPrint(lg LoggerFunc, err error) {
 	if nerr, ok := merry.Value(err, KeyNestedError).(error); ok {
 		NestedPrint(lg, nerr)
 	}
