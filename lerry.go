@@ -1,120 +1,77 @@
 package lerry
 
 import (
-	"reflect"
 	"github.com/ansel1/merry"
+	"github.com/sirupsen/logrus"
 )
 
-type LoggerFunc func(level int, msg string, args []interface{})
+const KeyLogLevel = "loglevel"
 
-const (
-	// LevelAlert means action must be taken immediately.
-	LevelAlert = 1
-
-	// LevelFatal means it should be corrected immediately, eg cannot connect to database.
-	LevelFatal = 2
-
-	// LevelError is a non-urgen failure to notify devlopers or admins
-	LevelError = 3
-
-	// LevelWarn indiates an error will occur if action is not taken, eg file system 85% full
-	LevelWarn = 4
-
-	// LevelNotice is normal but significant condition.
-	LevelNotice = 5
-
-	// LevelInfo is info level
-	LevelInfo = 6
-
-	// LevelDebug is debug level
-	LevelDebug = 7
-
-	// LevelTrace is trace level and displays file and line in terminal
-	LevelTrace = 8
-)
-
-const KeyNestedError = "nested error"
-const KeyUserMessage = "user message"
-const KeyLevel = "level"
-const KeyHttpResponseStatusCode = "http status code"
-
-func wrap(e error, level int) merry.Error {
+func wrap(e error, level logrus.Level) merry.Error {
 	if e == nil {
 		return nil
 	}
 
-	return merry.WrapSkipping(e, 3).WithValue("level", level)
+	return merry.WrapSkipping(e, 3).WithValue(KeyLogLevel, level)
 }
 
-func AlertWrap(e error) merry.Error {
-	return wrap(e, LevelAlert)
+func level(e error) logrus.Level {
+	val := merry.Value(e, KeyLogLevel)
+	if val == nil {
+		return 0
+	}
+
+	lvl, ok := val.(logrus.Level)
+	if !ok {
+		return 0
+	}
+
+	return lvl
+}
+
+func PanicWrap(e error) merry.Error {
+	return wrap(e, logrus.PanicLevel)
 }
 
 func FatalWrap(e error) merry.Error {
-	return wrap(e, LevelFatal)
-}
-func ErrorWrap(e error) merry.Error {
-	return wrap(e, LevelError)
-}
-func WarnWrap(e error) merry.Error {
-	return wrap(e, LevelWarn)
+	return wrap(e, logrus.FatalLevel)
 }
 
-func NoticeWrap(e error) merry.Error {
-	return wrap(e, LevelNotice)
+func ErrorWrap(e error) merry.Error {
+	return wrap(e, logrus.ErrorLevel)
+}
+
+func WarnWrap(e error) merry.Error {
+	return wrap(e, logrus.WarnLevel)
 }
 
 func InfoWrap(e error) merry.Error {
-	return wrap(e, LevelInfo)
+	return wrap(e, logrus.InfoLevel)
 }
 
 func DebugWrap(e error) merry.Error {
-	return wrap(e, LevelDebug)
+	return wrap(e, logrus.DebugLevel)
 }
 
 func TraceWrap(e error) merry.Error {
-	return wrap(e, LevelTrace)
+	return wrap(e, logrus.TraceLevel)
 }
 
-func Print(lg LoggerFunc, err error) {
-	level, msg, args := Prepare(err)
-	lg(level, msg, args)
-}
-
-func NestedPrint(lg LoggerFunc, err error) {
-	if nerr, ok := merry.Value(err, KeyNestedError).(error); ok {
-		NestedPrint(lg, nerr)
-	}
-	Print(lg, err)
-}
-
-func Prepare(err error) (level int, message string, arguments []interface{}) {
-	values := merry.Values(err)
-
-	args := make([]interface{}, 0)
-
-	for key, val := range values {
-		if key == KeyUserMessage || key == KeyNestedError || key == KeyLevel || key == KeyHttpResponseStatusCode {
-			continue
-		}
-
-		if reflect.TypeOf(key).String() == "string" {
-			args = append(args, key, val)
-		}
+func Log(err error, entry *logrus.Entry, args ...interface{}) {
+	lvl := level(err)
+	if lvl == 0 {
+		lvl = logrus.DebugLevel
 	}
 
-	errmsg := err.Error()
-	usrmsg := merry.UserMessage(err)
-	lv, ok := merry.Value(err, "level").(int)
-	if !ok {
-		lv = LevelWarn
+	msg := merry.UserMessage(err)
+	if msg != "" {
+		args = append([]interface{}{msg}, args...)
 	}
 
-	if lv == LevelFatal {
-		if strace := merry.Stacktrace(err); strace != "" {
-			args = append(args, "stack", strace)
-		}
+	stack := merry.Stacktrace(err)
+	if stack != "" {
+		args = append(args, "stack", stack)
 	}
 
-	return lv, usrmsg + ": " + errmsg, args
+	entry.WithError(err).Log(lvl, args...)
 }
